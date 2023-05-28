@@ -99,10 +99,10 @@ async function handleRecord(body: string, token: string, awsAccountID: string) {
       region: process.env.AWS_REGION
     })
 
-    const prefix: number = user_id % 100;
-    const uploadedImage = await s3photoBucket.upload({
+    const key = `tutanak/telegram/${user_id}/${user_id}_${new Date().toISOString().replaceAll(':', '')}_${uuidv4()}${file_ext}`;
+    await s3photoBucket.upload({
       Bucket: process.env.DownloadBucket as string,
-      Key: `${prefix}/${user_id}_${uuidv4()}${file_ext}`,
+      Key: key,
       Body: photoBuffer,
       ContentType: "application/octet-stream"
     }).promise()

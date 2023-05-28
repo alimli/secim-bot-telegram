@@ -9,14 +9,14 @@ import { sendToSqs } from "./application/sqsMessage";
 const fetch = require('node-fetch').default
 export const handler = async (event: LambdaFunctionEvent, context: Context) => {
   const failedMessageIds: string[] = [];
-  const token = await readToken();
+  const secrets: secrets = await readSecrets();
   const awsAccountID = context.invokedFunctionArn.split(":")[4];
 
   for (const record of event.Records) {
     try {
       console.log({ record });
       console.log(`Processing ${record.messageId}`);
-      await handleRecord(record.body, token, awsAccountID).then(
+      await handleRecord(record.body, secrets, awsAccountID).then(
         () => console.log(`Successfully processed ${record.messageId}`)
       ).catch(
         () => {
@@ -61,7 +61,7 @@ type TelegramGetFileResponse
     }
   }
 
-async function handleRecord(body: string, token: string, awsAccountID: string) {
+async function handleRecord(body: string, secrets: secrets, awsAccountID: string) {
   try {
 
     const message: DownloadRequest = JSON.parse(body);
@@ -70,7 +70,7 @@ async function handleRecord(body: string, token: string, awsAccountID: string) {
     const photo = message.photo;
     console.log({ photo, chat_id });
 
-    let url = `https://api.telegram.org/bot${token}/getFile?file_id=${photo.file_id}`;
+    let url = `https://api.telegram.org/bot${secrets.token}/getFile?file_id=${photo.file_id}`;
 
     console.log(`Calling Telegram GetFile: ${url}`);
 
@@ -83,7 +83,7 @@ async function handleRecord(body: string, token: string, awsAccountID: string) {
     })
 
     const file_ext: string = path.extname(result.file_path);
-    url = `https://api.telegram.org/file/bot${token}/${result.file_path}`
+    url = `https://api.telegram.org/file/bot${secrets.token}/${result.file_path}`
     console.log(`Calling Buffer GetPhoto: ${url}`)
 
 
@@ -96,7 +96,11 @@ async function handleRecord(body: string, token: string, awsAccountID: string) {
 
     console.log("SEND TO S3")
     const s3photoBucket = new AWS.S3({
-      region: process.env.AWS_REGION
+      region: process.env.DownloadBucketRegion,
+      credentials: {
+        accessKeyId: secrets.s3BucketAccessKey,
+        secretAccessKey: secrets.s3BucketSecretAccessKey
+      }
     })
 
     const key = `tutanak/telegram/${user_id}/${user_id}_${new Date().toISOString().replaceAll(':', '')}_${uuidv4()}${file_ext}`;
@@ -139,7 +143,14 @@ const handleTextResponse = (user_id: number, chat_id: number, awsAccountID: stri
 
 };
 
-async function readToken() {
+type secrets = {
+  token: string,
+  apiSecretToken: string,
+  s3BucketAccessKey: string,
+  s3BucketSecretAccessKey: string
+}
+
+async function readSecrets() {
   const secretManagerClient = new AWS.SecretsManager({
     region: process.env.AWS_REGION,
     accessKeyId: process.env.accsessKey,
@@ -154,8 +165,8 @@ async function readToken() {
     throw new Error("No telegram Key");
   }
 
-  const token = JSON.parse(secret.SecretString).token;
-  return token;
+  const secretObj = JSON.parse(secret.SecretString);
+  return secretObj as secrets;
 }
 
 

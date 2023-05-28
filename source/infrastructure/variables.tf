@@ -12,3 +12,7 @@ variable "secrets_manager_id" {
 variable "s3_download_bucket" {
   type = string
 }
+
+variable "s3_download_bucket_region" {
+  type = string
+}

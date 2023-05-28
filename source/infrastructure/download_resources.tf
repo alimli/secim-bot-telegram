@@ -70,6 +70,7 @@ resource "aws_lambda_function" "lambda_download_function" {
     variables = {
       TelegramBotToken  = var.secrets_manager_id,
       DownloadBucket    = var.s3_download_bucket,
+      DownloadBucketRegion = var.s3_download_bucket_region,
       OutboundQueueName = local.outbound_queue_name
     }
   }
@@ -99,14 +100,6 @@ resource "aws_iam_policy" "aws_lambda_sqs_download_policy" {
               "sqs:GetQueueAttributes"
             ],
             "Resource": ["${aws_sqs_queue.outbound_queue.arn}", "${aws_sqs_queue.download_queue.arn}"]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-              "s3:*",
-              "s3-object-lambda:*"
-            ],
-            "Resource": ["arn:aws:s3:::${var.s3_download_bucket}/*"]
         }
     ]
 }

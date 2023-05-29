@@ -71,13 +71,14 @@ const handleCallbackQuery = async (region: string, awsAccountID: string, bodyMes
     console.log(data)
 
     if (data.callback_query.data) {
-      const callback_data = data.callback_query.data;
-      console.log(`callback query Tanimlaniyor ${callback_data}}`)
+      // const callback_data = data.callback_query.data;
+      // console.log(`callback query Tanimlaniyor ${callback_data}}`)
+
       const region = process.env.AWS_REGION;
       const qname = process.env.OutboundQueueName;
       const queueUrl = `https://sqs.${region}.amazonaws.com/${awsAccountID}/${qname}`;
       const chat_id = data.callback_query.message.chat.id
-      const outgoingMessage = prepareTextResponse(callback_data, chat_id);
+      const outgoingMessage = prepareTextResponse("/system_closed", chat_id);
 
       console.log(outgoingMessage)
 
@@ -112,7 +113,7 @@ const handleRecord = async (region: string, awsAccountID: string, bodyMessage: s
     let response;
 
     if (input == "/start") {
-      response = handleTextRequest("/start", awsAccountID, updateMessage);
+      response = handleTextRequest("/start", awsAccountID, updateMessage, false);
       await sendToSqs(response, region);
       // response = handleTextRequest("/map", awsAccountID, updateMessage);
       // await sendToSqs(response, region);
@@ -125,31 +126,35 @@ const handleRecord = async (region: string, awsAccountID: string, bodyMessage: s
 
 
     if (updateMessage.message?.photo) {
-      const photos: PhotoSize[] = updateMessage.message.photo;
-      let photo: PhotoSize = photos[photos.length - 1];
-      response = handlePhotoRequest(photo, awsAccountID, updateMessage);
+      response = handleTextRequest("/system_closed", awsAccountID, updateMessage, false);
       await sendToSqs(response, region);
+      // const photos: PhotoSize[] = updateMessage.message.photo;
+      // let photo: PhotoSize = photos[photos.length - 1];
+      // response = handlePhotoRequest(photo, awsAccountID, updateMessage);
+      // await sendToSqs(response, region);
     }
 
     if (updateMessage.message?.document) {
-      const document: Document = updateMessage.message.document;
-      console.log("document is sent.");
-      if (document.mime_type?.startsWith("image")) {
-        console.log("Sent document is image.");
-        let photo: PhotoSize = {
-          file_id: document.file_id,
-          width: 0,
-          height: 0,
-          file_size: document.file_size,
-          file_unique_id: document.file_unique_id
-        }
-        response = handlePhotoRequest(photo, awsAccountID, updateMessage);
-        await sendToSqs(response, region);
+      response = handleTextRequest("/system_closed", awsAccountID, updateMessage, false);
+      await sendToSqs(response, region);
+      // const document: Document = updateMessage.message.document;
+      // console.log("document is sent.");
+      // if (document.mime_type?.startsWith("image")) {
+      //   console.log("Sent document is image.");
+      //   let photo: PhotoSize = {
+      //     file_id: document.file_id,
+      //     width: 0,
+      //     height: 0,
+      //     file_size: document.file_size,
+      //     file_unique_id: document.file_unique_id
+      //   }
+      //   response = handlePhotoRequest(photo, awsAccountID, updateMessage);
+      //   await sendToSqs(response, region);
 
-      } else {
-        response = handleTextRequest("/invalid_document_format", awsAccountID, updateMessage, false);
-        await sendToSqs(response, region);
-      }
+      // } else {
+      //   response = handleTextRequest("/invalid_document_format", awsAccountID, updateMessage, false);
+      //   await sendToSqs(response, region);
+      // }
     }
 
     const message: Message | undefined = updateMessage.message;
@@ -242,7 +247,7 @@ const messages: Record<string, string[]> = {
   "/start": [
     "*Oy Tutanak Telegram Botu * ",
     "Merhaba, *Oy Tutanak Telegram Botu*na hoşgeldiniz\\.",
-    "Aşağıdaki butonlara tıklayarak oy tutanağı fotoğrafı gönderebilir, eksik oy tutanakları haritasını görebilir veya genel bilgi alabilirsiniz\\.",
+    "Telegram botumuz tutanak gönderimine kapanmıştır\\. İlginiz için teşekkür ederiz\\.",
   ],
   "/map": [
     "* Eksik Oy Tutanakları Haritası * ",
@@ -282,6 +287,9 @@ const messages: Record<string, string[]> = {
   "/invalid_message_format": [
     "HATA: Paylaştığınız mesaj tipi uygun değildir\\! Lütfen sadece fotoğraf dosyalarını paylaşınız\\. Fotoğraf dışındaki belge, video gibi mesajları kabul ede*mi*yoruz\\."
   ],
+  "/system_closed": [
+    "Telegram botumuz tutanak gönderimine kapanmıştır\\. İlginiz için teşekkür ederiz\\.",
+  ]
 
 };
 
